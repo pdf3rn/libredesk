@@ -18,6 +18,7 @@ import (
 	"github.com/abhinavxd/libredesk/internal/inbox/channel/email"
 	"github.com/abhinavxd/libredesk/internal/inbox/channel/email/oauth"
 	"github.com/abhinavxd/libredesk/internal/inbox/channel/livechat"
+	telegramChannel "github.com/abhinavxd/libredesk/internal/inbox/channel/telegram"
 	whatsappChannel "github.com/abhinavxd/libredesk/internal/inbox/channel/whatsapp"
 	imodels "github.com/abhinavxd/libredesk/internal/inbox/models"
 	wtmodels "github.com/abhinavxd/libredesk/internal/whatsapp/template/models"
@@ -104,6 +105,10 @@ func setComputedInboxFields(app *App, inb *imodels.Inbox) {
 
 func setComputedInboxFieldsWithRoot(app *App, inb *imodels.Inbox, rootURL string) {
 	_, inb.TokenInvalid = app.inboxAuthErrors.Load(inb.ID)
+	if inb.Channel == telegramChannel.ChannelTelegram {
+		inb.WebhookURL = telegramWebhookURLFromRoot(rootURL, inb.ID)
+		return
+	}
 	if inb.Channel != whatsappChannel.ChannelWhatsApp {
 		return
 	}
@@ -202,6 +207,12 @@ func handleCreateInbox(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
+	if inbox.Channel == telegramChannel.ChannelTelegram {
+		if err := prepareTelegramInbox(r, app, &inbox); err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+	}
+
 	createdInbox, err := app.inbox.Create(inbox)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
@@ -263,6 +274,21 @@ func handleUpdateInbox(r *fastglue.Request) error {
 		}
 		inbox.Config = merged
 		if err := validateWhatsAppCredentials(r, app, inbox); err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+	}
+
+	if inbox.Channel == telegramChannel.ChannelTelegram {
+		previous, err := app.inbox.GetDBRecord(id)
+		if err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+		merged, err := app.inbox.MergeTelegramSecrets(previous.Config, inbox.Config)
+		if err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+		inbox.Config = merged
+		if err := prepareTelegramInbox(r, app, &inbox); err != nil {
 			return sendErrorEnvelope(r, err)
 		}
 	}

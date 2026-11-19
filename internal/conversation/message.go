@@ -231,6 +231,15 @@ func (m *Manager) sendOutgoingMessage(message models.Message) {
 		outbound.References, outbound.InReplyTo = m.BuildEmailThreadingHeaders(message.ConversationID, outbound.SourceID)
 	}
 
+	// Telegram replies go to the chat id linked to the contact.
+	if inb.Channel() == inbox.ChannelTelegram {
+		chatID, err := m.userStore.GetChannelIdentity(message.MessageReceiverID, inbox.ChannelTelegram)
+		if handleError(err, "error fetching telegram chat id for contact") {
+			return
+		}
+		outbound.To = []string{chatID}
+	}
+
 	// Send message
 	err = inb.Send(outbound)
 	if err != nil && err != livechat.ErrClientNotConnected {
@@ -333,7 +342,7 @@ func (m *Manager) RenderMessageInTemplate(channel string, message *models.Messag
 			m.lo.Error("could not render email content using template", "id", message.ID, "error", err)
 			return fmt.Errorf("could not render email content using template: %w", err)
 		}
-	case inbox.ChannelLiveChat, inbox.ChannelWhatsApp:
+	case inbox.ChannelLiveChat, inbox.ChannelWhatsApp, inbox.ChannelTelegram:
 		m.RenderArticleReferences(message)
 		return nil
 	default:
@@ -1215,6 +1224,20 @@ func (m *Manager) ProcessIncomingWhatsAppMessage(msg models.Message, isNewConver
 		return models.Message{}, windowErr
 	}
 
+	return msg, nil
+}
+
+// ProcessIncomingTelegramMessage uploads attachments, inserts an inbound Telegram message and runs the incoming hooks.
+func (m *Manager) ProcessIncomingTelegramMessage(msg models.Message, isNewConversation bool) (models.Message, error) {
+	if err := m.uploadMessageAttachments(&msg); err != nil {
+		return models.Message{}, fmt.Errorf("uploading telegram attachments: %w", err)
+	}
+	if err := m.InsertMessage(&msg); err != nil {
+		return models.Message{}, err
+	}
+	if err := m.ProcessIncomingMessageHooks(msg, isNewConversation); err != nil {
+		m.lo.Error("error processing incoming message hooks", "conversation_uuid", msg.ConversationUUID, "error", err)
+	}
 	return msg, nil
 }
 

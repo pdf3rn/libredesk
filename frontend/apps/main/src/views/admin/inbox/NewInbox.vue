@@ -38,6 +38,14 @@
           :available-languages="availableLanguages"
         />
       </div>
+      <div v-else-if="selectedChannel === 'telegram'">
+        <TelegramInboxForm
+          :initial-values="{}"
+          :submitForm="submitTelegramForm"
+          :isLoading="isLoading"
+          :isNewForm="true"
+        />
+      </div>
       <div v-else-if="selectedChannel === 'whatsapp'">
         <WhatsAppInboxForm
           :initial-values="{}"
@@ -62,6 +70,8 @@ import FormGrid from '@shared-ui/components/FormGrid.vue'
 import EmailInboxForm from '@/features/admin/inbox/EmailInboxForm.vue'
 import LivechatInboxForm from '@/features/admin/inbox/LivechatInboxForm.vue'
 import WhatsAppInboxForm from '@/features/admin/inbox/WhatsAppInboxForm.vue'
+import TelegramInboxForm from '@/features/admin/inbox/TelegramInboxForm.vue'
+import TelegramIcon from '@main/components/icons/TelegramIcon.vue'
 import api from '@/api'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
@@ -116,6 +126,12 @@ const channels = [
     onClick: selectWhatsAppChannel,
     icon: WhatsAppIcon,
     badge: t('globals.terms.beta')
+  },
+  {
+    title: t('globals.terms.telegram'),
+    subTitle: t('admin.inbox.help.telegram'),
+    onClick: () => selectChannel('telegram'),
+    icon: TelegramIcon
   }
 ]
 
@@ -180,6 +196,18 @@ const submitWhatsAppForm = (values) => {
     config: values.config
   }
   createInbox(payload)
+}
+
+const submitTelegramForm = (values) => {
+  createInbox({
+    name: values.name,
+    channel: 'telegram',
+    enabled: values.enabled ?? true,
+    csat_enabled: false,
+    prompt_tags_on_reply: values.prompt_tags_on_reply ?? false,
+    reopen_window_hours: values.reopen_window_hours ?? 0,
+    config: values.config
+  })
 }
 
 async function createInbox(payload) {

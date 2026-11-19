@@ -74,6 +74,18 @@
             {{ $t('globals.terms.learnMore') }}
           </a>
         </div>
+        <div class="space-y-1">
+          <p class="text-sm font-medium text-foreground">{{ $t('globals.terms.telegram') }}</p>
+          <p class="ui-description">{{ $t('admin.inbox.help.telegram') }}</p>
+          <a
+            href="https://core.telegram.org/bots/tutorial"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="link-style text-sm"
+          >
+            {{ $t('globals.terms.learnMore') }}
+          </a>
+        </div>
       </div>
     </template>
   </AdminSplitLayout>

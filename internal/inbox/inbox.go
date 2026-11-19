@@ -32,7 +32,11 @@ const (
 	ChannelEmail    = "email"
 	ChannelLiveChat = "livechat"
 	ChannelWhatsApp = "whatsapp"
+	ChannelTelegram = "telegram"
 )
+
+// secretConfigFields are top-level config fields encrypted at rest (WhatsApp and Telegram).
+var secretConfigFields = []string{"access_token", "app_secret", "webhook_verify_token", "bot_token", "webhook_secret"}
 
 var (
 	// Embedded filesystem
@@ -503,6 +507,12 @@ func (m *Manager) Update(id int, inbox imodels.Inbox) (imodels.Inbox, error) {
 			return imodels.Inbox{}, err
 		}
 		inbox.Config = merged
+	case ChannelTelegram:
+		merged, err := m.MergeTelegramSecrets(current.Config, inbox.Config)
+		if err != nil {
+			return imodels.Inbox{}, err
+		}
+		inbox.Config = merged
 	}
 
 	// Encrypt sensitive fields before updating
@@ -575,19 +585,28 @@ func (m *Manager) Update(id int, inbox imodels.Inbox) (imodels.Inbox, error) {
 
 // MergeWhatsAppSecrets restores masked or empty secret fields in an update config from the currently stored config.
 func (m *Manager) MergeWhatsAppSecrets(current, update json.RawMessage) (json.RawMessage, error) {
+	return m.mergeSecrets(current, update, []string{"access_token", "app_secret", "webhook_verify_token"})
+}
+
+// MergeTelegramSecrets restores masked or empty Telegram secrets in an update config from the stored config.
+func (m *Manager) MergeTelegramSecrets(current, update json.RawMessage) (json.RawMessage, error) {
+	return m.mergeSecrets(current, update, []string{"bot_token", "webhook_secret"})
+}
+
+func (m *Manager) mergeSecrets(current, update json.RawMessage, fields []string) (json.RawMessage, error) {
 	var currentCfg, updateCfg map[string]any
 	if err := json.Unmarshal(current, &currentCfg); err != nil {
-		m.lo.Error("error unmarshalling current whatsapp config", "error", err)
+		m.lo.Error("error unmarshalling current inbox config", "error", err)
 		return nil, envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
 	if len(update) == 0 {
 		return nil, envelope.NewError(envelope.InputError, m.i18n.Ts("globals.messages.empty", "name", "{globals.terms.config}"), nil)
 	}
 	if err := json.Unmarshal(update, &updateCfg); err != nil {
-		m.lo.Error("error unmarshalling whatsapp update config", "error", err)
+		m.lo.Error("error unmarshalling inbox update config", "error", err)
 		return nil, envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
-	for _, fieldName := range []string{"access_token", "app_secret", "webhook_verify_token"} {
+	for _, fieldName := range fields {
 		val, _ := updateCfg[fieldName].(string)
 		if val == "" || strings.Contains(val, stringutil.PasswordDummy) {
 			if existing, ok := currentCfg[fieldName].(string); ok {
@@ -597,7 +616,7 @@ func (m *Manager) MergeWhatsAppSecrets(current, update json.RawMessage) (json.Ra
 	}
 	merged, err := json.Marshal(updateCfg)
 	if err != nil {
-		m.lo.Error("error marshalling whatsapp merged config", "error", err)
+		m.lo.Error("error marshalling merged inbox config", "error", err)
 		return nil, err
 	}
 	return merged, nil
@@ -909,11 +928,11 @@ func (m *Manager) encryptInboxConfig(config json.RawMessage) (json.RawMessage, e
 		}
 	}
 
-	for _, fieldName := range []string{"access_token", "app_secret", "webhook_verify_token"} {
+	for _, fieldName := range secretConfigFields {
 		if value, ok := cfg[fieldName].(string); ok && value != "" && !crypto.IsEncrypted(value) {
 			encrypted, err := crypto.Encrypt(value, m.encryptionKey)
 			if err != nil {
-				return nil, fmt.Errorf("encrypting whatsapp %s: %w", fieldName, err)
+				return nil, fmt.Errorf("encrypting %s: %w", fieldName, err)
 			}
 			cfg[fieldName] = encrypted
 		}
@@ -985,11 +1004,11 @@ func (m *Manager) decryptInboxConfig(config json.RawMessage) (json.RawMessage, e
 		}
 	}
 
-	for _, fieldName := range []string{"access_token", "app_secret", "webhook_verify_token"} {
+	for _, fieldName := range secretConfigFields {
 		if value, ok := cfg[fieldName].(string); ok && crypto.IsEncrypted(value) {
 			decrypted, err := crypto.Decrypt(value, m.encryptionKey)
 			if err != nil {
-				m.lo.Error("error decrypting whatsapp credential, clearing field", "field", fieldName, "error", err)
+				m.lo.Error("error decrypting inbox credential, clearing field", "field", fieldName, "error", err)
 				cfg[fieldName] = ""
 				continue
 			}

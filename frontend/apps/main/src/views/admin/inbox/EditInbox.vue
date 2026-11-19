@@ -37,6 +37,12 @@
         :isLoading="isLoading"
         v-else-if="inbox.channel === 'whatsapp'"
       />
+      <TelegramInboxForm
+        :initialValues="inbox"
+        :submitForm="submitForm"
+        :isLoading="isLoading"
+        v-else-if="inbox.channel === 'telegram'"
+      />
     </div>
   </LoadingOverlay>
 </template>
@@ -47,6 +53,7 @@ import api from '@/api'
 import EmailInboxForm from '@/features/admin/inbox/EmailInboxForm.vue'
 import LivechatInboxForm from '@/features/admin/inbox/LivechatInboxForm.vue'
 import WhatsAppInboxForm from '@/features/admin/inbox/WhatsAppInboxForm.vue'
+import TelegramInboxForm from '@/features/admin/inbox/TelegramInboxForm.vue'
 import { CustomBreadcrumb } from '@shared-ui/components/ui/breadcrumb/index.js'
 import CopyButton from '@/components/button/CopyButton.vue'
 import LoadingOverlay from '@main/components/layout/LoadingOverlay.vue'
@@ -139,6 +146,21 @@ const submitForm = (values) => {
     }
     if (payload.config.app_secret?.includes('•')) {
       payload.config.app_secret = ''
+    }
+  } else if (inbox.value.channel === 'telegram') {
+    payload = {
+      name: values.name,
+      from: inbox.value.from,
+      channel: inbox.value.channel,
+      enabled: values.enabled,
+      csat_enabled: false,
+      prompt_tags_on_reply: values.prompt_tags_on_reply,
+      reopen_window_hours: values.reopen_window_hours,
+      config: { ...values.config }
+    }
+    // Emptying a masked token makes the backend keep the stored one.
+    if (payload.config.bot_token?.includes('•')) {
+      payload.config.bot_token = ''
     }
   }
 

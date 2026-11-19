@@ -1849,5 +1849,20 @@
   "widget.replyTeam": "Route replies to team",
   "widget.searchArticles": "Search for help",
   "widget.showHelpTab": "Show Help tab",
-  "widget.urlPatternsHint": "One URL or path per line. Use * to match any characters. Empty includes match every page."
+  "widget.urlPatternsHint": "One URL or path per line. Use * to match any characters. Empty includes match every page.",
+  "globals.terms.telegram": "Telegram",
+  "admin.inbox.help.telegram": "Connect a Telegram bot to receive and reply to private messages, by polling or webhook.",
+  "admin.inbox.telegram.bot": "Telegram bot",
+  "admin.inbox.telegram.botToken": "Bot token",
+  "admin.inbox.telegram.botToken.description": "The token @BotFather gives you when you create the bot. It is checked with Telegram when you save.",
+  "admin.inbox.telegram.mode": "How messages arrive",
+  "admin.inbox.telegram.mode.polling": "Polling",
+  "admin.inbox.telegram.mode.polling.description": "Libredesk keeps asking Telegram for new messages. Works anywhere, even on localhost or behind a firewall.",
+  "admin.inbox.telegram.mode.webhook": "Webhook",
+  "admin.inbox.telegram.mode.webhook.description": "Telegram pushes each message to Libredesk. Needs the app root URL to be a public HTTPS address.",
+  "admin.inbox.telegram.webhook.description": "The webhook is registered with Telegram automatically when you save, protected by a secret token.",
+  "admin.inbox.telegram.pollTimeout": "Long-poll wait (seconds)",
+  "admin.inbox.telegram.pollTimeout.description": "How long each request waits for new messages, 1 to 50.",
+  "admin.inbox.telegram.apiURL": "Bot API URL (optional)",
+  "admin.inbox.telegram.apiURL.description": "Leave empty to use api.telegram.org, or point it at your own Bot API server."
 }
